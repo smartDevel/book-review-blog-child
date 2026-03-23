@@ -182,6 +182,32 @@ add_action('wp_ajax_filter_buchrezensionen', 'filter_buchrezensionen_handler');
 add_action('wp_ajax_nopriv_filter_buchrezensionen', 'filter_buchrezensionen_handler');
 
 function filter_buchrezensionen_handler() {
+    $rating = sanitize_text_field($_GET['rating'] ?? 'all');
+
+    // Wenn Rating gefiltert wird: Bücher mit Reviews dieser Bewertung finden
+    $linked_book_ids = [];
+    if ($rating !== 'all') {
+        $rating_int = intval($rating);
+        $review_ids = get_posts([
+            'post_type'      => 'book_reviews',
+            'meta_key'       => '_rswpbs_rating',
+            'meta_value'     => $rating_int,
+            'posts_per_page' => -1,
+            'post_status'    => 'publish',
+            'fields'         => 'ids',
+        ]);
+        foreach ($review_ids as $rid) {
+            $bid = get_post_meta($rid, '_rswpbs_reviewed_book', true);
+            if ($bid) $linked_book_ids[] = $bid;
+        }
+        $linked_book_ids = array_unique($linked_book_ids);
+
+        if (empty($linked_book_ids)) {
+            echo '<p>Keine Rezensionen mit dieser Bewertung gefunden.</p>';
+            wp_die();
+        }
+    }
+
     $args = [
         'post_type'      => 'post',
         'posts_per_page' => intval($_GET['per_page'] ?? 8),
@@ -189,16 +215,26 @@ function filter_buchrezensionen_handler() {
         'order'          => 'DESC',
     ];
 
+    // Rating-Filter auf Posts anwenden (verlinkte Bücher)
+    if (!empty($linked_book_ids)) {
+        $args['meta_key']   = '_linked_book_id';
+        $args['meta_value'] = implode(',', $linked_book_ids);
+        $args['meta_compare'] = 'IN';
+    }
+
+    // Kategorie filtern
     if (!empty($_GET['category']) && $_GET['category'] !== 'all') {
         $args['category_name'] = sanitize_text_field($_GET['category']);
     } else {
         $args['category_name'] = 'book-review';
     }
 
+    // Autor filtern
     if (!empty($_GET['author']) && $_GET['author'] !== 'all') {
         $args['author'] = intval($_GET['author']);
     }
 
+    // Suche
     if (!empty($_GET['s'])) {
         $args['s'] = sanitize_text_field($_GET['s']);
     }
@@ -214,12 +250,36 @@ function filter_buchrezensionen_handler() {
     while ($query->have_posts()) {
         $query->the_post();
         $thumb = get_the_post_thumbnail_url(get_the_ID(), 'medium');
+
+        // Bewertung des verlinkten Buches holen
+        $book_id = get_post_meta(get_the_ID(), '_linked_book_id', true);
+        $review_rating = '';
+        if ($book_id) {
+            $reviews = get_posts([
+                'post_type'      => 'book_reviews',
+                'meta_key'       => '_rswpbs_reviewed_book',
+                'meta_value'     => $book_id,
+                'posts_per_page' => 1,
+                'post_status'    => 'publish',
+                'fields'         => 'ids',
+            ]);
+            if (!empty($reviews)) {
+                $rating_val = get_post_meta($reviews[0], '_rswpbs_rating', true);
+                if ($rating_val) {
+                    for ($s = 1; $s <= 5; $s++) {
+                        $review_rating .= ($s <= $rating_val) ? '⭐' : '☆';
+                    }
+                }
+            }
+        }
+
         echo '<div class="rezension-card" style="flex:1;min-width:280px;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.1);">';
         if ($thumb) {
             echo '<a href="' . get_permalink() . '"><img src="' . esc_url($thumb) . '" style="width:100%;height:200px;object-fit:cover;"></a>';
         }
         echo '<div style="padding:15px;">';
         echo '<h3 style="margin:0 0 10px;"><a href="' . get_permalink() . '">' . get_the_title() . '</a></h3>';
+        if ($review_rating) echo '<p style="margin-bottom:8px;">' . $review_rating . '</p>';
         echo '<p style="color:#666;font-size:14px;">' . get_the_date() . '</p>';
         echo '<p>' . wp_trim_words(get_the_excerpt(), 20) . '</p>';
         echo '<a href="' . get_permalink() . '" style="color:#39b152;font-weight:600;">Weiterlesen &rarr;</a>';
@@ -246,7 +306,18 @@ add_shortcode('buchrezensionen', function ($atts) {
                     <label for="rez-filter-search" style="display:block;font-weight:600;margin-bottom:5px;">Suche</label>
                     <input type="text" id="rez-filter-search" placeholder="Buchtitel oder Autor suchen..." style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;">
                 </div>
-                <div style="flex:1;min-width:180px;">
+                <div style="flex:1;min-width:150px;">
+                    <label for="rez-filter-rating" style="display:block;font-weight:600;margin-bottom:5px;">Bewertung</label>
+                    <select id="rez-filter-rating" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;">
+                        <option value="all">Alle Bewertungen</option>
+                        <option value="5">⭐⭐⭐⭐⭐ (5 Sterne)</option>
+                        <option value="4">⭐⭐⭐⭐ (4 Sterne)</option>
+                        <option value="3">⭐⭐⭐ (3 Sterne)</option>
+                        <option value="2">⭐⭐ (2 Sterne)</option>
+                        <option value="1">⭐ (1 Stern)</option>
+                    </select>
+                </div>
+                <div style="flex:1;min-width:150px;">
                     <label for="rez-filter-cat" style="display:block;font-weight:600;margin-bottom:5px;">Kategorie</label>
                     <select id="rez-filter-cat" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;">
                         <option value="book-review">Buchrezension</option>
@@ -258,7 +329,7 @@ add_shortcode('buchrezensionen', function ($atts) {
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div style="flex:1;min-width:180px;">
+                <div style="flex:1;min-width:150px;">
                     <label for="rez-filter-author" style="display:block;font-weight:600;margin-bottom:5px;">Autor</label>
                     <select id="rez-filter-author" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;">
                         <option value="all">Alle Autoren</option>
@@ -288,6 +359,7 @@ add_shortcode('buchrezensionen', function ($atts) {
                 per_page: perPage,
                 category: params.category || 'book-review',
                 author: params.author || 'all',
+                rating: params.rating || 'all',
                 s: params.s || ''
             };
             $('#rezensionen-results').html('<p style="text-align:center;color:#999;">Laden...</p>');
@@ -302,6 +374,7 @@ add_shortcode('buchrezensionen', function ($atts) {
             loadReviews({
                 category: $('#rez-filter-cat').val(),
                 author: $('#rez-filter-author').val(),
+                rating: $('#rez-filter-rating').val(),
                 s: $('#rez-filter-search').val()
             });
         });
@@ -314,6 +387,7 @@ add_shortcode('buchrezensionen', function ($atts) {
             $('#rez-filter-search').val('');
             $('#rez-filter-cat').val('book-review');
             $('#rez-filter-author').val('all');
+            $('#rez-filter-rating').val('all');
             loadReviews({ category: 'book-review' });
         });
     });
@@ -321,4 +395,3 @@ add_shortcode('buchrezensionen', function ($atts) {
     <?php
     return ob_get_clean();
 });
-
