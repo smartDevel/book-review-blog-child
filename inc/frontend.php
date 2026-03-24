@@ -149,7 +149,21 @@ jQuery(document).ready(function($) {
     $('#book-isbn-10').closest('.rswpbs-col-lg-3, .rswpbs-col-lg-4, [class*="col"]').hide();
     $('#book-isbn-10').closest('.search-field').parent().hide();
 
-    /* Rating-Filter: Sterne-Dropdown */
+    /* Rating-Filter: Buchkarten mit data-book-rating versehen */
+    var idRating = window.__bookIdRating || {};
+    $('.rswpbs-book-loop-content-wrapper').each(function() {
+        var $wrapper = $(this);
+        var $link = $wrapper.find('a[href*="book_id="]').first();
+        if (!$link.length) return;
+        var match = ($link.attr('href') || '').match(/book_id=(\d+)/);
+        if (!match) return;
+        var bookId = match[1];
+        if (idRating[bookId]) {
+            $wrapper.closest('[class*="rswpbs-col"]').attr('data-book-rating', idRating[bookId]);
+        }
+    });
+
+    /* Rating-Dropdown einfügen */
     var $ratingSelect = $('<select id="filter-rating" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;">' +
         '<option value="all">Alle Bewertungen</option>' +
         '<option value="5">⭐⭐⭐⭐⭐ (5 Sterne)</option>' +
@@ -158,8 +172,6 @@ jQuery(document).ready(function($) {
         '<option value="2">⭐⭐ (2 Sterne)</option>' +
         '<option value="1">⭐ (1 Stern)</option>' +
         '</select>');
-
-    /* Vor dem Submit-Button einfügen */
     var $searchForm = $('.rswpbs-advanced-search-form-area .rswpbs-search-form');
     if ($searchForm.length) {
         var $submitCol = $searchForm.find('input[type="submit"]').closest('[class*="col"]');
@@ -168,34 +180,18 @@ jQuery(document).ready(function($) {
         }
     }
 
-    /* Buchkarten mit data-book-rating versehen (Slug-Mapping) */
-    var slugRating = window.__bookSlugRating || {};
-    $('.rswpbs-book-container').each(function() {
-        var $container = $(this);
-        var $link = $container.find('a').first();
-        if (!$link.length) return;
-        var href = $link.attr('href') || '';
-        /* Slug aus URL extrahieren */
-        var parts = href.replace(/\/$/, '').split('/');
-        var slug = parts[parts.length - 1];
-        if (slugRating[slug]) {
-            $container.closest('[class*="rswpbs-col"]').attr('data-book-rating', slugRating[slug]);
-        }
-    });
-
     /* Filterung */
     $(document).on('change', '#filter-rating', function() {
         var rating = $(this).val();
         if (rating === 'all') {
-            $('[class*="rswpbs-col"][data-book-rating]').show();
-            $('[class*="rswpbs-col"]:not([data-book-rating])').show();
+            $('[data-book-rating]').closest('[class*="rswpbs-col"]').show();
         } else {
             $('[data-book-rating]').each(function() {
-                var $card = $(this);
-                if ($card.attr('data-book-rating') === rating) {
-                    $card.show();
+                var $col = $(this).closest('[class*="rswpbs-col"]');
+                if ($(this).attr('data-book-rating') === rating) {
+                    $col.show();
                 } else {
-                    $card.hide();
+                    $col.hide();
                 }
             });
         }

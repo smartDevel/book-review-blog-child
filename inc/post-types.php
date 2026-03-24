@@ -24,28 +24,23 @@ add_action('template_redirect', function () {
     }
 });
 
-// Rating-Filter: Slug→Rating Mapping im Footer + Client-Filter
+// Rating-Filter: Book ID→Rating Mapping im Footer
 add_action('wp_footer', function () {
     if (is_admin()) return;
     global $wpdb;
-    $mappings = $wpdb->get_results(
-        "SELECT p.post_name AS slug, ROUND(CAST(pm.meta_value AS DECIMAL)) AS rating
-         FROM {$wpdb->posts} p
-         JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-         WHERE p.post_type = 'book' AND p.post_status = 'publish'
-         AND pm.meta_key = 'average_book_rating'
-         AND pm.meta_value IS NOT NULL AND pm.meta_value != '' AND pm.meta_value != 'nan'",
-        OBJECT_K
+    $rows = $wpdb->get_results(
+        "SELECT pm.post_id, ROUND(CAST(pm.meta_value AS DECIMAL)) AS rating
+         FROM {$wpdb->postmeta} pm
+         WHERE pm.meta_key = 'average_book_rating'
+         AND pm.meta_value IS NOT NULL AND pm.meta_value != '' AND pm.meta_value != 'nan'"
     );
-    $slugRating = [];
-    foreach ($mappings as $slug => $row) {
-        $slugRating[$slug] = intval($row->rating);
+    $map = [];
+    foreach ($rows as $row) {
+        $map[intval($row->post_id)] = intval($row->rating);
     }
-    if (empty($slugRating)) return;
+    if (empty($map)) return;
     ?>
-    <script>
-    window.__bookSlugRating = <?php echo json_encode($slugRating); ?>;
-    </script>
+    <script>window.__bookIdRating=<?php echo json_encode($map); ?>;</script>
     <?php
 });
 
