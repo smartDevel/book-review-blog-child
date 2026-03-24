@@ -24,5 +24,16 @@ add_action('template_redirect', function () {
     }
 });
 
-// Rating-Filter: entfernt — client-seitig via JavaScript
+// Rating-Filter: AJAX Endpoint für Buch-Ratings
+add_action('wp_ajax_get_book_ratings', 'rswpbs_get_book_ratings_ajax');
+add_action('wp_ajax_nopriv_get_book_ratings', 'rswpbs_get_book_ratings_ajax');
+function rswpbs_get_book_ratings_ajax() {
+    $books = get_posts(['post_type' => 'book', 'numberposts' => -1, 'fields' => 'ids']);
+    $ratings = [];
+    foreach ($books as $bid) {
+        $avg = get_post_meta($bid, 'average_book_rating', true);
+        if ($avg) $ratings[$bid] = round(floatval($avg));
+    }
+    wp_send_json_success($ratings);
+}
 

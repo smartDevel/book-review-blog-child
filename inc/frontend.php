@@ -149,7 +149,7 @@ jQuery(document).ready(function($) {
     $('#book-isbn-10').closest('.rswpbs-col-lg-3, .rswpbs-col-lg-4, [class*="col"]').hide();
     $('#book-isbn-10').closest('.search-field').parent().hide();
 
-    /* Rating-Select: Client-seitige Filterung */
+    /* Rating-Filter: AJAX-basierte Client-Filterung */
     var $ratingSelect = $('<select id="filter-rating" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;">' +
         '<option value="all">Alle Bewertungen</option>' +
         '<option value="5">⭐⭐⭐⭐⭐ (5 Sterne)</option>' +
@@ -158,7 +158,6 @@ jQuery(document).ready(function($) {
         '<option value="2">⭐⭐ (2 Sterne)</option>' +
         '<option value="1">⭐ (1 Stern)</option>' +
         '</select>');
-    var $ratingField = $('<div class="search-field"></div>').append($ratingSelect);
 
     /* Vor dem Submit-Button einfügen */
     var $searchForm = $('.rswpbs-advanced-search-form-area .rswpbs-search-form');
@@ -169,26 +168,45 @@ jQuery(document).ready(function($) {
         }
     }
 
-    /* Client-seitige Filterung: Karten ohne passende Sterne ausblenden */
-    $('#filter-rating').on('change', function() {
+    /* AJAX: Ratings laden und data-attribute setzen */
+    var bookRatings = {};
+    $.get(ajaxurl || '/wp-admin/admin-ajax.php', { action: 'get_book_ratings' }, function(response) {
+        if (response.success) {
+            bookRatings = response.data;
+            /* Jede Buchkarte mit data-book-rating versehen */
+            $('.rswpbs-book-loop-content-wrapper').each(function() {
+                var $wrapper = $(this);
+                var $link = $wrapper.find('a[href*="book_id="]').first();
+                if ($link.length) {
+                    var href = $link.attr('href');
+                    var match = href.match(/book_id=(\d+)/);
+                    if (match) {
+                        var bookId = match[1];
+                        if (bookRatings[bookId]) {
+                            $wrapper.closest('[class*="rswpbs-col"]').attr('data-book-rating', bookRatings[bookId]);
+                        }
+                    }
+                }
+            });
+        }
+    });
+
+    /* Filterung */
+    $(document).on('change', '#filter-rating', function() {
         var rating = $(this).val();
-        /* Alle Buch-Karten finden */
-        $('.rswpbs-books-showcase-book-loop-container .rswpbs-col-lg-4, .rswpbs-books-showcase-book-loop-container .rswpbs-col-lg-3, .rswpbs-books-showcase-book-loop-container .rswpbs-col-lg-6').each(function() {
-            var $card = $(this);
+        $('[data-book-rating]').each(function() {
             if (rating === 'all') {
-                $card.show();
-                return;
-            }
-            /* Volle Sterne zählen */
-            var fullStars = $card.find('.star-rating-inner .fa-star, .star-rating-inner .fas.fa-star').length;
-            var halfStars = $card.find('.star-rating-inner .fa-star-half-alt, .star-rating-inner .fas.fa-star-half-alt').length;
-            var bookRating = fullStars + (halfStars > 0 ? 0.5 : 0);
-            if (Math.round(bookRating) === parseInt(rating)) {
-                $card.show();
+                $(this).show();
+            } else if ($(this).attr('data-book-rating') === rating) {
+                $(this).show();
             } else {
-                $card.hide();
+                $(this).hide();
             }
         });
+        /* Auch Karten OHNE Rating bei "all" anzeigen */
+        if (rating === 'all') {
+            $('.rswpbs-books-showcase-book-loop-container [class*="rswpbs-col"]').show();
+        }
     });
 
     /* Search Button */
