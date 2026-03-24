@@ -150,7 +150,7 @@ jQuery(document).ready(function($) {
     $('#book-isbn-10').closest('.search-field').parent().hide();
 
     /* Rating-Select als Dropdown (ohne Label, gleiche Höhe) */
-    var $ratingSelect = $('<select name="rating" id="filter-rating" class="rswpbs-select-field" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;">' +
+    var $ratingSelect = $('<select name="book_rating" id="filter-rating" class="rswpbs-select-field" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;">' +
         '<option value="all">Alle Bewertungen</option>' +
         '<option value="5">⭐⭐⭐⭐⭐ (5 Sterne)</option>' +
         '<option value="4">⭐⭐⭐⭐ (4 Sterne)</option>' +
@@ -172,7 +172,7 @@ jQuery(document).ready(function($) {
 
     /* URL-Parameter: Rating vorauswählen (OHNE Change-Event = kein Loop) */
     var urlParams = new URLSearchParams(window.location.search);
-    var currentRating = urlParams.get('rating');
+    var currentRating = urlParams.get('book_rating');
     if (currentRating) {
         $('#filter-rating').val(currentRating);
     }

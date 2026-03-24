@@ -24,12 +24,11 @@ add_action('template_redirect', function () {
     }
 });
 
-// Rating-Filter: über rswpbs_search_fields Plugin-Hook
-// Das Plugin liest $_GET['rating'] NICHT — wir haken uns in den WP_Query ein
+// Rating-Filter: über posts_where (Parameter: book_rating)
 add_filter('posts_where', function ($where, $query) {
     if (is_admin()) return $where;
-    if (empty($_GET['rating']) || $_GET['rating'] === 'all' || $_GET['rating'] === '') return $where;
-    $rating = intval($_GET['rating']);
+    if (empty($_GET['book_rating']) || $_GET['book_rating'] === 'all' || $_GET['book_rating'] === '') return $where;
+    $rating = intval($_GET['book_rating']);
     if ($rating < 1 || $rating > 5) return $where;
     global $wpdb;
     $where .= " AND {$wpdb->posts}.ID IN (
