@@ -24,19 +24,23 @@ add_action('template_redirect', function () {
     }
 });
 
-// Rating-Filter: über posts_where (Parameter: book_rating)
-add_filter('posts_where', function ($where, $query) {
-    if (is_admin()) return $where;
-    if (empty($_GET['book_rating']) || $_GET['book_rating'] === 'all' || $_GET['book_rating'] === '') return $where;
+// Rating-Filter: über pre_get_posts (funktioniert für ALLE Queries)
+add_action('pre_get_posts', function ($query) {
+    if (is_admin()) return;
+    if (empty($_GET['book_rating']) || $_GET['book_rating'] === 'all') return;
     $rating = intval($_GET['book_rating']);
-    if ($rating < 1 || $rating > 5) return $where;
-    global $wpdb;
-    $where .= " AND {$wpdb->posts}.ID IN (
-        SELECT post_id FROM {$wpdb->postmeta}
-        WHERE meta_key = 'average_book_rating'
-        AND CAST(meta_value AS DECIMAL) >= {$rating}
-        AND CAST(meta_value AS DECIMAL) < " . ($rating + 1) . "
-    )";
-    return $where;
-}, 10, 2);
+    if ($rating < 1 || $rating > 5) return;
+
+    $meta_query = $query->get('meta_query');
+    if (!is_array($meta_query)) $meta_query = [];
+
+    $meta_query[] = [
+        'key'     => 'average_book_rating',
+        'value'   => $rating,
+        'compare' => '=',
+        'type'    => 'NUMERIC',
+    ];
+
+    $query->set('meta_query', $meta_query);
+});
 
