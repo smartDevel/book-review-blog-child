@@ -32,8 +32,15 @@ function rswpbs_get_book_ratings_ajax() {
     $ratings = [];
     foreach ($books as $bid) {
         $avg = get_post_meta($bid, 'average_book_rating', true);
-        if ($avg) $ratings[$bid] = round(floatval($avg));
+        if ($avg !== '' && $avg !== 'nan') $ratings[$bid] = round(floatval($avg));
     }
-    wp_send_json_success($ratings);
+    wp_die(json_encode($ratings));
 }
+
+// AJAX-URL für Frontend bereitstellen
+add_action('wp_enqueue_scripts', function () {
+    wp_localize_script('jquery', 'rswpbsData', [
+        'ajaxurl' => admin_url('admin-ajax.php')
+    ]);
+});
 

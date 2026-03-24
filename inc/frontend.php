@@ -169,43 +169,41 @@ jQuery(document).ready(function($) {
     }
 
     /* AJAX: Ratings laden und data-attribute setzen */
-    var bookRatings = {};
-    $.get(ajaxurl || '/wp-admin/admin-ajax.php', { action: 'get_book_ratings' }, function(response) {
-        if (response.success) {
-            bookRatings = response.data;
-            /* Jede Buchkarte mit data-book-rating versehen */
-            $('.rswpbs-book-loop-content-wrapper').each(function() {
-                var $wrapper = $(this);
-                var $link = $wrapper.find('a[href*="book_id="]').first();
-                if ($link.length) {
-                    var href = $link.attr('href');
-                    var match = href.match(/book_id=(\d+)/);
-                    if (match) {
-                        var bookId = match[1];
-                        if (bookRatings[bookId]) {
-                            $wrapper.closest('[class*="rswpbs-col"]').attr('data-book-rating', bookRatings[bookId]);
-                        }
-                    }
+    var ajaxUrl = (typeof rswpbsData !== 'undefined' && rswpbsData.ajaxurl) ? rswpbsData.ajaxurl : '/wp-admin/admin-ajax.php';
+    $.get(ajaxUrl, { action: 'get_book_ratings' }, function(response) {
+        var bookRatings = {};
+        try {
+            bookRatings = typeof response === 'string' ? JSON.parse(response) : response;
+        } catch(e) { return; }
+
+        /* Jede Buchkarte mit data-book-rating versehen */
+        $('.rswpbs-books-showcase-book-loop-container a[href*="book_id"]').each(function() {
+            var href = $(this).attr('href');
+            var match = href.match(/book_id=(\d+)/);
+            if (match) {
+                var bookId = match[1];
+                if (bookRatings[bookId]) {
+                    $(this).closest('[class*="rswpbs-col"]').attr('data-book-rating', bookRatings[bookId]);
                 }
-            });
-        }
+            }
+        });
     });
 
     /* Filterung */
     $(document).on('change', '#filter-rating', function() {
         var rating = $(this).val();
-        $('[data-book-rating]').each(function() {
-            if (rating === 'all') {
-                $(this).show();
-            } else if ($(this).attr('data-book-rating') === rating) {
-                $(this).show();
-            } else {
-                $(this).hide();
-            }
-        });
-        /* Auch Karten OHNE Rating bei "all" anzeigen */
+        var $allCards = $('.rswpbs-books-showcase-book-loop-container > .rswpbs-row > [class*="rswpbs-col"]');
         if (rating === 'all') {
-            $('.rswpbs-books-showcase-book-loop-container [class*="rswpbs-col"]').show();
+            $allCards.show();
+        } else {
+            $allCards.each(function() {
+                var r = $(this).attr('data-book-rating');
+                if (r === rating) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
         }
     });
 
