@@ -24,23 +24,5 @@ add_action('template_redirect', function () {
     }
 });
 
-// Rating-Filter: über pre_get_posts (funktioniert für ALLE Queries)
-add_action('pre_get_posts', function ($query) {
-    if (is_admin()) return;
-    if (empty($_GET['book_rating']) || $_GET['book_rating'] === 'all') return;
-    $rating = intval($_GET['book_rating']);
-    if ($rating < 1 || $rating > 5) return;
-
-    $meta_query = $query->get('meta_query');
-    if (!is_array($meta_query)) $meta_query = [];
-
-    $meta_query[] = [
-        'key'     => 'average_book_rating',
-        'value'   => $rating,
-        'compare' => '=',
-        'type'    => 'NUMERIC',
-    ];
-
-    $query->set('meta_query', $meta_query);
-});
+// Rating-Filter: entfernt — client-seitig via JavaScript
 

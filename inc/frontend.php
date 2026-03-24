@@ -149,8 +149,8 @@ jQuery(document).ready(function($) {
     $('#book-isbn-10').closest('.rswpbs-col-lg-3, .rswpbs-col-lg-4, [class*="col"]').hide();
     $('#book-isbn-10').closest('.search-field').parent().hide();
 
-    /* Rating-Select als Dropdown (ohne Label, gleiche Höhe) */
-    var $ratingSelect = $('<select name="book_rating" id="filter-rating" class="rswpbs-select-field" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;">' +
+    /* Rating-Select: Client-seitige Filterung */
+    var $ratingSelect = $('<select id="filter-rating" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;">' +
         '<option value="all">Alle Bewertungen</option>' +
         '<option value="5">⭐⭐⭐⭐⭐ (5 Sterne)</option>' +
         '<option value="4">⭐⭐⭐⭐ (4 Sterne)</option>' +
@@ -158,28 +158,37 @@ jQuery(document).ready(function($) {
         '<option value="2">⭐⭐ (2 Sterne)</option>' +
         '<option value="1">⭐ (1 Stern)</option>' +
         '</select>');
-    var $ratingWrapper = $('<div class="search-field"><div class="search-field">' + '</div></div>');
-    $ratingWrapper.find('.search-field').append($ratingSelect);
+    var $ratingField = $('<div class="search-field"></div>').append($ratingSelect);
 
-    var $searchFields = $('.rswpbs-advanced-search-form-area .rswpbs-search-form');
-    if ($searchFields.length) {
-        /* Vor dem Submit-Button einfügen */
-        var $submitCol = $searchFields.find('input[type="submit"]').closest('[class*="col"]');
+    /* Vor dem Submit-Button einfügen */
+    var $searchForm = $('.rswpbs-advanced-search-form-area .rswpbs-search-form');
+    if ($searchForm.length) {
+        var $submitCol = $searchForm.find('input[type="submit"]').closest('[class*="col"]');
         if ($submitCol.length) {
             $submitCol.before('<div class="rswpbs-col-lg-4 rswpbs-col-6 rswpbs-col-md-4"><div class="search-field">' + $ratingSelect[0].outerHTML + '</div></div>');
         }
     }
 
-    /* URL-Parameter: Rating vorauswählen (OHNE Change-Event = kein Loop) */
-    var urlParams = new URLSearchParams(window.location.search);
-    var currentRating = urlParams.get('book_rating');
-    if (currentRating) {
-        $('#filter-rating').val(currentRating);
-    }
-
-    /* Auto-Submit NUR bei echter User-Änderung */
-    $(document).on('change', '#filter-rating', function() {
-        $('#rswpbs-books-search-form').submit();
+    /* Client-seitige Filterung: Karten ohne passende Sterne ausblenden */
+    $('#filter-rating').on('change', function() {
+        var rating = $(this).val();
+        /* Alle Buch-Karten finden */
+        $('.rswpbs-books-showcase-book-loop-container .rswpbs-col-lg-4, .rswpbs-books-showcase-book-loop-container .rswpbs-col-lg-3, .rswpbs-books-showcase-book-loop-container .rswpbs-col-lg-6').each(function() {
+            var $card = $(this);
+            if (rating === 'all') {
+                $card.show();
+                return;
+            }
+            /* Volle Sterne zählen */
+            var fullStars = $card.find('.star-rating-inner .fa-star, .star-rating-inner .fas.fa-star').length;
+            var halfStars = $card.find('.star-rating-inner .fa-star-half-alt, .star-rating-inner .fas.fa-star-half-alt').length;
+            var bookRating = fullStars + (halfStars > 0 ? 0.5 : 0);
+            if (Math.round(bookRating) === parseInt(rating)) {
+                $card.show();
+            } else {
+                $card.hide();
+            }
+        });
     });
 
     /* Search Button */
