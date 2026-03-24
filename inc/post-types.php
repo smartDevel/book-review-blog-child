@@ -24,20 +24,5 @@ add_action('template_redirect', function () {
     }
 });
 
-// Rating-Filter für Bücher (via the_posts — funktioniert mit Plugin-Queries)
-add_filter('the_posts', function ($posts, $query) {
-    if (is_admin()) return $posts;
-    if (empty($_GET['rating']) || $_GET['rating'] === 'all') return $posts;
-    $rating = intval($_GET['rating']);
-    if ($rating < 1 || $rating > 5) return $posts;
-
-    $filtered = [];
-    foreach ($posts as $post) {
-        $avg = floatval(get_post_meta($post->ID, 'average_book_rating', true));
-        if (round($avg) === $rating) {
-            $filtered[] = $post;
-        }
-    }
-    return $filtered;
-}, 10, 2);
+// Rating-Filter: entfernt — Plugin unterstützt serverseitiges Rating-Filtering nicht
 
