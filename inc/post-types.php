@@ -24,5 +24,20 @@ add_action('template_redirect', function () {
     }
 });
 
-// Rating-Filter: entfernt — Plugin unterstützt serverseitiges Rating-Filtering nicht
+// Rating-Filter: über rswpbs_search_fields Plugin-Hook
+// Das Plugin liest $_GET['rating'] NICHT — wir haken uns in den WP_Query ein
+add_filter('posts_where', function ($where, $query) {
+    if (is_admin()) return $where;
+    if (empty($_GET['rating']) || $_GET['rating'] === 'all' || $_GET['rating'] === '') return $where;
+    $rating = intval($_GET['rating']);
+    if ($rating < 1 || $rating > 5) return $where;
+    global $wpdb;
+    $where .= " AND {$wpdb->posts}.ID IN (
+        SELECT post_id FROM {$wpdb->postmeta}
+        WHERE meta_key = 'average_book_rating'
+        AND CAST(meta_value AS DECIMAL) >= {$rating}
+        AND CAST(meta_value AS DECIMAL) < " . ($rating + 1) . "
+    )";
+    return $where;
+}, 10, 2);
 
