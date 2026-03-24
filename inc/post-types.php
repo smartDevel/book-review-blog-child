@@ -25,10 +25,12 @@ add_action('template_redirect', function () {
 });
 
 // Alle Bücher laden: shortcode attribute filter
+// Der Shortcode hat books_per_page="8" explizit gesetzt — wir überschreiben auf -1
 add_filter('shortcode_atts_rswpbs_book_gallery', function ($out, $pairs, $atts) {
-    $out['books_per_page'] = '-1';
+    $out['books_per_page'] = -1;  // -1 = alle Bücher laden
+    $out['show_pagination'] = 'false';  // Pagination deaktivieren
     return $out;
-}, 10, 3);
+}, 999, 3);  // Priorität 999 — läuft als letztes
 
 // Rating-Filter: Book ID→Rating Mapping im Footer
 add_action('wp_footer', function () {
