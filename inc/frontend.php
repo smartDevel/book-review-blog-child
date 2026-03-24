@@ -159,7 +159,8 @@ jQuery(document).ready(function($) {
         if (!match) return;
         var bookId = match[1];
         if (idRating[bookId]) {
-            $wrapper.closest('[class*="rswpbs-col"]').attr('data-book-rating', idRating[bookId]);
+            /* Auf das äußere Container-Div setzen */
+            $wrapper.closest('.rswpbs-book-container').attr('data-book-rating', idRating[bookId]);
         }
     });
 
@@ -180,18 +181,18 @@ jQuery(document).ready(function($) {
         }
     }
 
-    /* Filterung */
+    /* Filterung — Container verstecken (enthält Cover + Inhalt) */
     $(document).on('change', '#filter-rating', function() {
         var rating = $(this).val();
         if (rating === 'all') {
-            $('[data-book-rating]').closest('[class*="rswpbs-col"]').show();
+            $('.rswpbs-book-container').show();
         } else {
-            $('[data-book-rating]').each(function() {
-                var $col = $(this).closest('[class*="rswpbs-col"]');
-                if ($(this).attr('data-book-rating') === rating) {
-                    $col.show();
+            $('.rswpbs-book-container').each(function() {
+                var r = $(this).attr('data-book-rating');
+                if (r === rating) {
+                    $(this).show();
                 } else {
-                    $col.hide();
+                    $(this).hide();
                 }
             });
         }
