@@ -24,3 +24,22 @@ add_action('template_redirect', function () {
     }
 });
 
+// Rating-Filter für Bücher
+add_action('pre_get_posts', function ($query) {
+    if (is_admin() || !$query->is_main_query()) return;
+    if (empty($_GET['rating']) || $_GET['rating'] === 'all') return;
+    if ($query->get('post_type') !== 'book' && !is_post_type_archive('book')) return;
+
+    $rating = intval($_GET['rating']);
+    if ($rating < 1 || $rating > 5) return;
+
+    $meta_query = $query->get('meta_query') ?: [];
+    $meta_query[] = [
+        'key'     => 'average_book_rating',
+        'value'   => $rating,
+        'compare' => '=',
+        'type'    => 'NUMERIC',
+    ];
+    $query->set('meta_query', $meta_query);
+});
+

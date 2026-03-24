@@ -145,6 +145,61 @@ jQuery(document).ready(function($) {
         if ($reviewSubmit.length) $reviewSubmit.val('💬 Bewertung speichern');
     }
 
+    /* ISBN-10 ausblenden */
+    $('input[name*="isbn"]').each(function() {
+        var $field = $(this).closest('.search-field');
+        if ($field.length) $field.hide();
+    });
+    $('label[for*="isbn"]').each(function() {
+        $(this).closest('.search-field').hide();
+    });
+
+    /* Rating-Filter hinzufügen */
+    var $ratingSelect = $('<div class="search-field" style="flex:1;min-width:150px;">' +
+        '<label for="filter-rating" style="display:block;font-weight:600;margin-bottom:5px;">Bewertung</label>' +
+        '<select name="rating" id="filter-rating" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;">' +
+        '<option value="all">Alle Bewertungen</option>' +
+        '<option value="5">⭐⭐⭐⭐⭐ (5 Sterne)</option>' +
+        '<option value="4">⭐⭐⭐⭐ (4 Sterne)</option>' +
+        '<option value="3">⭐⭐⭐ (3 Sterne)</option>' +
+        '<option value="2">⭐⭐ (2 Sterne)</option>' +
+        '<option value="1">⭐ (1 Stern)</option>' +
+        '</select></div>');
+    var $searchFields = $('.rswpbs-advanced-search-form-area .search-fields');
+    if ($searchFields.length) {
+        $searchFields.append($ratingSelect);
+    } else {
+        var $form = $('#rswpbs-books-search-form');
+        if ($form.length) {
+            var $submit = $form.find('input[type="submit"]').closest('.search-field, .submit-field');
+            if ($submit.length) {
+                $submit.before($ratingSelect);
+            }
+        }
+    }
+
+    /* Rating-Filter: Select2 + Auto-Submit */
+    $('#filter-rating').select2({ placeholder: 'Bewertung wählen...', allowClear: true });
+    $('#filter-rating').on('change', function() {
+        var rating = $(this).val();
+        if (rating && rating !== 'all') {
+            var url = new URL(window.location.href);
+            url.searchParams.set('rating', rating);
+            window.location.href = url.toString();
+        } else {
+            var url = new URL(window.location.href);
+            url.searchParams.delete('rating');
+            window.location.href = url.toString();
+        }
+    });
+
+    /* URL-Parameter: Rating vorauswählen */
+    var urlParams = new URLSearchParams(window.location.search);
+    var currentRating = urlParams.get('rating');
+    if (currentRating) {
+        $('#filter-rating').val(currentRating).trigger('change');
+    }
+
     /* Search Button */
     $('#rswpbs-books-search-form input[type="submit"]').each(function() {
         if (!$(this).val()) $(this).attr('value', '🔍 Suchen');
