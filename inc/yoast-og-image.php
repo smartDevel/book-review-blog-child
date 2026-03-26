@@ -47,14 +47,21 @@ add_action('wpseo_opengraph', function () {
     }
 });
 
-// og:image für normale Posts die kein Featured Image haben → Fallback auf erstes Bild im Content
+// og:image für Blog-Posts: Buchcover aus verlinktem Buch übernehmen
 add_filter('wpseo_opengraph_image', function ($image_url) {
-    if ($image_url) return $image_url; // Bereits gesetzt
+    if ($image_url) return $image_url; // Bereits gesetzt (Featured Image)
     
-    // Erstes Bild aus dem Content nehmen
     global $post;
     if (!$post) return $image_url;
     
+    // 1. Prüfen ob Post ein verlinktes Buch hat → Cover verwenden
+    $linked_book_id = get_post_meta($post->ID, '_linked_book_id', true);
+    if ($linked_book_id) {
+        $book_cover = get_the_post_thumbnail_url($linked_book_id, 'large');
+        if ($book_cover) return $book_cover;
+    }
+    
+    // 2. Fallback: Erstes Bild aus dem Content
     $content = $post->post_content;
     if (preg_match('/<img[^>]+src=["\']([^"\']+)["\']/i', $content, $matches)) {
         return $matches[1];
